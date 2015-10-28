@@ -1,0 +1,5 @@
+file	target
+config.local.fish	~/.config/fish/%
+.vimrc	~/%
+.tmux.conf	~/%
+.emacs.el   ~/.emacs.d/init.el

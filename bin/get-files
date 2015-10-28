@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+DEBUG=0
+DEFS=files.tsv
+
+function split-pair-apply {
+    func=$1
+    pair_src=$2
+    test $DEBUG -gt 0 && echo split-pair-apply: ${func} "${pair_src}" 1>&2
+    eval "${func}" $(echo "${pair_src}" | cut -f1,2)
+}
+
+function expand-apply {
+    func=$1
+    shift
+    first=$1
+    second=$2
+    pattern="s,%,${first},g"
+    test $DEBUG -gt 0 && echo second: $(echo ${2} | xxd) 1>&2
+    second=$(echo "${second}" | sed ${pattern})
+    test $DEBUG -gt 0 && echo second: "${second}" 1>&2
+    eval ${func} "${first}" "${second}"
+}
+
+function apply {
+    func=$1
+    shift
+    rest=$@
+    eval ${func} ${rest}
+}
+
+function get-value {
+    which=$1
+    shift
+    first=$1
+    second=$2
+    case ${which} in
+    first)
+        echo "${first}"
+        ;;
+    second)
+        echo "${second}"
+    esac
+}
+
+function get-files {
+    get_which=$1
+    is_first=1
+
+    test $DEBUG -gt 0 && echo get_which: ${get_which} 1>&2
+
+    case ${get_which} in
+    collect)
+        out_func="get-value first"
+        ;;
+    install)
+        out_func="get-value second"
+        ;;
+    both)
+        out_func=echo
+        ;;
+    *)
+        echo "Usage: $0 source | target | both" 1>&2
+        return 1
+    esac
+
+    while IFS='' read -r line || test -n "$line";
+    do
+        if test "${is_first}" -eq 1; then
+            is_first=0
+        else
+            test $DEBUG -gt 0 && echo line: "${line}" 1>&2
+            eval ${out_func} $(split-pair-apply "expand-apply echo" "${line}")
+        fi
+    done < ${DEFS}
+}
+
+get-files $@
